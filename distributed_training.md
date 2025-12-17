@@ -11,6 +11,8 @@ Modern Large Language Models (LLMs) are trained in parallel across multiple GPUs
 
 # Single GPU Training
 
+## Theory
+
 Read the section entitled "First Steps: Single GPU Training" in the [Nanotron UltraScale Playbook](https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=high-level_overview).
 
 Answer the following questions:
@@ -23,7 +25,11 @@ Answer the following questions:
 3. What is gradient accumulation? What is the relationship between the global and micro batch sizes?
 
 
-Run the 
+## Practical
+
+
+
+
 
 
 
