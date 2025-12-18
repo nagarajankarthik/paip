@@ -59,7 +59,7 @@ The step time in seconds is 2.02, 3.90 and 7.69 for gbs = 16, 32 and 64 respecti
 
 The throughput per GPU in TFLOP/s/GPU is 203.6, 209.5 and 213.2 for gbs = 16, 32 and 64 respectively.
 
-There is a slight increase in throughput with increasing global batch size because the optimizer step can be performed after peforming the forward and backward passes for more samples.
+There is a slight increase in throughput with increasing global batch size because the optimizer step can be executed after peforming the forward and backward passes for more samples. Since the time required for the optimizer step depends only on the number of model parameters, the number of samples processed per second is slightly greater for larger global batch sizes.
 ```
 
 
