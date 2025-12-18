@@ -5,7 +5,7 @@ from megatron.bridge.training.gpt_step import forward_step
 from megatron.bridge.training.pretrain import pretrain
 
 if __name__ == "__main__":
-    cfg = qwen3_4b_pretrain_config(dir="./qwen3_4b_megatron", tensor_model_parallel_size = 1,
+    cfg = qwen3_4b_pretrain_config(dir="./qwen3_4b_megatron", tensor_parallelism = 1,
                                    train_iters = 10, lr_warmup_iters=5, seq_length=1024)
 
     # cfg = qwen3_600m_pretrain_config(dir="./qwen3_600m_megatron", tensor_parallelism = 1,
