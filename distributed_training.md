@@ -38,7 +38,16 @@ Perform an initial training run without changing any parameters in the [qwen3_pr
 - Throughput per GPU (TFLOP/s/GPU)
 
 
-Answer: ??
+```
+Theoretical memory footprints: weight and optimizer=69053.29 MB
+[Rank 0] (after 1 iterations) memory (MB) | allocated: 69454.74462890625 | max allocated: 69454.76025390625 | reserved: 73472.0 | max reserved: 73472.0
+
+Step time: 3.90 s
+
+Throughput per GPU: 209.5 TFLOP/s/GPU
+```
+
+
 
 Perform the following experiments:
 
