@@ -27,7 +27,34 @@ Answer the following questions:
 
 ## Practical
 
+The hands-on exercises will involve training the Qwen3-4B model using the [Megatron-Bridge](https://github.com/NVIDIA-NeMo/Megatron-Bridge/tree/main) framework. The training parameters can be configured using the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file. The existing set of parameters should be used as a baseline for comparison.
 
+
+Perform an initial training run without changing any parameters in the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file. Take note of the following results from the training logs:
+
+- Theoretical memory footprint (MB)
+- Allocated and reserved memory after the first iteration
+- Step time (s) 
+- Throughput per GPU (TFLOP/s/GPU)
+
+
+Answer: ??
+
+Perform the following experiments:
+
+1. Try running the training with the `global_batch_size` parameter in the `train` section (i.e. `train.global_batch_size`) set to 16 and 64. In each case, adjust the `train.train_iters` parameter to ensure that the validation and test losses are below ?. How does the required total training time vary with the batch size? 
+
+Answer: The required training time is inversely proportional to the batch size. The training takes a longer time as the batch size decreases because the number of optimizer steps increases.
+
+2. Megatron-Bridge supports activation recomputation using the `recompute_granularity` parameter in the `model` section. The effect of activating this setting during training will be investigated in this task.
+
+    a. Try running the training with `recompute_granularity` set to `full` and `selective`. This will require uncommenting the line containing `recompute_granularity` in the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file. How do the `Step time` and `Throughput per GPU` metrics change as compared to the baseline run for which this setting was not enabled? Explain the reasons for the observed differences.
+
+    b. Increase `model.seq_length` and `dataset.sequence_length` to 16384. Run the training without activation recomputation, and with `recompute_granularity` set to `full` and `selective`. How do the `Step time` and `Throughput per GPU` metrics compare for these three cases? If you encounter an error for any of these cases, explain the likely reasons. 
+
+    c. Apart from the case of large sequence lengths, what are some other scenarios where activation recomputation may be useful?
+
+Try training the model with and without activation recomputation. What is the effect on the training time and throughput? 
 
 
 
