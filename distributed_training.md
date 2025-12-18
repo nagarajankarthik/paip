@@ -36,24 +36,33 @@ Perform an initial training run without changing any parameters in the [qwen3_pr
 - Allocated and reserved memory after the first iteration
 - Step time (s) 
 - Throughput per GPU (TFLOP/s/GPU)
+- Validation and test losses
 
 
 ```
 Theoretical memory footprints: weight and optimizer=69053.29 MB
 [Rank 0] (after 1 iterations) memory (MB) | allocated: 69454.74462890625 | max allocated: 69454.76025390625 | reserved: 73472.0 | max reserved: 73472.0
-
 Step time: 3.90 s
-
 Throughput per GPU: 209.5 TFLOP/s/GPU
+Training loss at last iteration: 2.25
+Validation loss: 1.82
+Test loss: 2.11
 ```
-
-
 
 Perform the following experiments:
 
-1. Try running the training with the `global_batch_size` parameter in the `train` section (i.e. `train.global_batch_size`) set to 16 and 64. In each case, adjust the `train.train_iters` parameter to ensure that the validation and test losses are below ?. How does the required total training time vary with the batch size? 
+1. Try running the training with the `global_batch_size` parameter in the `train` section (i.e. `train.global_batch_size`) set to 16 and 64. How do the `Step time` and `Throughput per GPU` metrics vary with global batch size?
 
-Answer: The required training time is inversely proportional to the batch size. The training takes a longer time as the batch size decreases because the number of optimizer steps increases.
+
+```
+The step time in seconds is 2.02, 3.90 and 7.69 for gbs = 16, 32 and 64 respectively.
+
+The throughput per GPU in TFLOP/s/GPU is 203.6, 209.5 and 213.2 for gbs = 16, 32 and 64 respectively.
+
+There is a slight increase in throughput with increasing global batch size because the optimizer step can be performed after peforming the forward and backward passes for more samples.
+```
+
+
 
 2. Megatron-Bridge supports activation recomputation using the `recompute_granularity` parameter in the `model` section. The effect of activating this setting during training will be investigated in this task.
 
