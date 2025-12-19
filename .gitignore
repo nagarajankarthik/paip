@@ -2,3 +2,4 @@ Megatron-Bridge/*
 megatron-lm/*
 qwen3_4b_megatron/*
 nemo_experiments/*
+logs/*
