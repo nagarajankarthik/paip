@@ -83,7 +83,7 @@ rng:
 ddp:
   grad_reduce_in_fp32: true 
   overlap_param_gather: true
-  use_distributed_optimizer: true
+  use_distributed_optimizer: false
 
 profiling:
   # For optional fields in the config, specify the target to instantiate the object.
