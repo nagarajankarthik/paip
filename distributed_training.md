@@ -39,8 +39,7 @@ Perform an initial training run without changing any parameters in the [qwen3_pr
 - Validation and test losses
 
 
-####
-
+---Answer Begin---
 ```
 Theoretical memory footprints: weight and optimizer=69053.29 MB
 [Rank 0] (after 1 iterations) memory (MB) | allocated: 69454.74462890625 | max allocated: 69454.76025390625 | reserved: 73472.0 | max reserved: 73472.0
@@ -50,8 +49,7 @@ Training loss at last iteration: 2.25
 Validation loss: 1.82
 Test loss: 2.11
 ```
-
-###
+---Answer End---
 
 Perform the following experiments:
 
