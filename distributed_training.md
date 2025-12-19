@@ -74,9 +74,25 @@ As the global batch size becomes very large, the number of samples processed per
 
 ---Answer End---
 
+2. Try running the training with the `micro_batch_size` parameter in the `train` section (i.e. `train.micro_batch_size`) set to 2, 4, 8 and 16. How does the throughput vary with micro batch size?
+
+---Answer Begin---
+
+| Micro batch size | Step time (s) | Throughput per GPU (TFLOP/s/GPU) |
+| --- | --- | --- |
+| 1 | 4.10 | 200.33 |
+| 2 | 2.25 | 364.83 |
+| 4 | 2.06 | 398.66 |
+| 8 | 1.96 | 419.49 |
+
+__Answer End__
 
 
-2. Megatron-Bridge supports activation recomputation using the `recompute_granularity` parameter in the `model` section. The effect of activating this setting during training will be investigated in this task.
+
+
+
+
+3. Megatron-Bridge supports activation recomputation using the `recompute_granularity` parameter in the `model` section. The effect of activating this setting during training will be investigated in this task.
 
     a. Try running the training with `recompute_granularity` set to `full` and `selective`. This will require uncommenting the line containing `recompute_granularity` in the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file. How do the `Step time` and `Throughput per GPU` metrics change as compared to the baseline run for which this setting was not enabled? Explain the reasons for the observed differences.
 
@@ -98,12 +114,18 @@ As the global batch size becomes very large, the number of samples processed per
 
     b. Increase `model.seq_length` and `dataset.sequence_length` to 16384. Run the training without activation recomputation, and with `recompute_granularity` set to `full` and `selective`. How do the `Step time` and `Throughput per GPU` metrics compare for these three cases? If you encounter an error for any of these cases, explain the likely reasons. 
 
+    ---Answer Begin---
+
+    One encounters errors related to insufficient memory if activation recomputation is disabled or set to selective. For long sequence lengths, the activations account for a significant proportion of the vRAM usage and attempting to store even a subset of them may be infeasible. The training only works when activation recomputation is set to full. In this case, the average step time and throughput per GPU per second are 58.03 seconds and 349.04 TFLOP/s/GPU respectively.
+
+    ---Answer End---
+
     c. Apart from the case of large sequence lengths, what are some other scenarios where activation recomputation may be useful?
 
-```
-It may be needed when training models with a large number of parameters as the hidden size would be large in such cases. It may also be required when using large batch size.
-```
+    ---Answer Begin---
+    It may be needed when training models with a large number of parameters as the hidden size would be large in such cases. It may also be required when using large batch size.
 
+    ---Answer End---
 
 
 
