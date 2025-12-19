@@ -43,11 +43,8 @@ Perform an initial training run without changing any parameters in the [qwen3_pr
 ```
 Theoretical memory footprints: weight and optimizer=69053.29 MB
 [Rank 0] (after 1 iterations) memory (MB) | allocated: 69454.74462890625 | max allocated: 69454.76025390625 | reserved: 73472.0 | max reserved: 73472.0
-Step time: 3.90 s
-Throughput per GPU: 209.5 TFLOP/s/GPU
-Training loss at last iteration: 2.25
-Validation loss: 1.82
-Test loss: 2.11
+Average Step Time: 4.097s
+Average GPU Utilization: 200.33 TFLOP/s/GPU
 ```
 ---Answer End---
 
@@ -56,13 +53,26 @@ Perform the following experiments:
 1. Try running the training with the `global_batch_size` parameter in the `train` section (i.e. `train.global_batch_size`) set to 16 and 64. How do the `Step time` and `Throughput per GPU` metrics vary with global batch size?
 
 
-```
-The step time in seconds is 2.02, 3.90 and 7.69 for gbs = 16, 32 and 64 respectively.
+---Answer Begin---
 
-The throughput per GPU in TFLOP/s/GPU is 203.6, 209.5 and 213.2 for gbs = 16, 32 and 64 respectively.
+| Global batch size | Step time (s) | Throughput per GPU (TFLOP/s/GPU) |
+| --- | --- | --- |
+| 16 | 2.11 | 194.68 |
+| 32 | 4.10 | 200.33 |
+| 64 | 8.09 | 202.99 |
+
 
 There is a slight increase in throughput with increasing global batch size because the optimizer step can be executed after peforming the forward and backward passes for more samples. Since the time required for the optimizer step depends only on the number of model parameters, the number of samples processed per second is slightly greater for larger global batch sizes.
-```
+
+The extent of increase in throughput decreases with increasing global batch size. Let $b$, $x$ and $y$ denote the global batch size, total time required for forward and backward passes per sample and time required for the optimizer step respectively. The number of samples processed per second is given by:
+
+$$
+Number of samples processed per second = \frac{b}{bx + y} = \frac{1}{x + \frac{y}{b}}
+$$
+
+As the global batch size becomes very large, the number of samples processed per second approaches the constant value of $1/x$. Hence, increasing global batch size does not lead to a significant increase in throughput when this quantity is already very large.
+
+---Answer End---
 
 
 
@@ -70,8 +80,19 @@ There is a slight increase in throughput with increasing global batch size becau
 
     a. Try running the training with `recompute_granularity` set to `full` and `selective`. This will require uncommenting the line containing `recompute_granularity` in the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file. How do the `Step time` and `Throughput per GPU` metrics change as compared to the baseline run for which this setting was not enabled? Explain the reasons for the observed differences.
 
-    ```
-    The 
+    ---Answer Begin---
+
+    | Setting | Step time (s) | Throughput per GPU (TFLOP/s/GPU) |
+    | --- | --- | --- |
+    | None | 4.10 | 200.33 |
+    | Full | 3.90 | 209.5 |
+    | Selective | 3.90 | 209.5 |
+
+    The step time and throughput per GPU are the same as the baseline run.
+    
+    ---Answer End---
+
+
 
     b. Increase `model.seq_length` and `dataset.sequence_length` to 16384. Run the training without activation recomputation, and with `recompute_granularity` set to `full` and `selective`. How do the `Step time` and `Throughput per GPU` metrics compare for these three cases? If you encounter an error for any of these cases, explain the likely reasons. 
 
@@ -90,3 +111,6 @@ It may be needed when training models with a large number of parameters as the h
 * [Nanotron UltraScale Playbook](https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=high-level_overview)
 * 
 * [Visualizing 6D Mesh Parallelism](https://main-horse.github.io/posts/visualizing-6d/#pipelining-and-fsdp)
+* [DeepSpeed Pipeline Paralleism](https://www.deepspeed.ai/tutorials/pipeline/)
+* [Megatron Parallelism Guide](https://docs.nvidia.com/nemo/megatron-bridge/latest/parallelisms.html#data-parallelism)
+* [Megatron Performance Guide](https://docs.nvidia.com/nemo/megatron-bridge/latest/performance-guide.html#long-sequence-training)
