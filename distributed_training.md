@@ -39,7 +39,7 @@ Perform an initial training run without changing any parameters in the [qwen3_pr
 - Validation and test losses
 
 
-```
+####
 Theoretical memory footprints: weight and optimizer=69053.29 MB
 [Rank 0] (after 1 iterations) memory (MB) | allocated: 69454.74462890625 | max allocated: 69454.76025390625 | reserved: 73472.0 | max reserved: 73472.0
 Step time: 3.90 s
@@ -47,7 +47,7 @@ Throughput per GPU: 209.5 TFLOP/s/GPU
 Training loss at last iteration: 2.25
 Validation loss: 1.82
 Test loss: 2.11
-```
+###
 
 Perform the following experiments:
 
@@ -68,12 +68,16 @@ There is a slight increase in throughput with increasing global batch size becau
 
     a. Try running the training with `recompute_granularity` set to `full` and `selective`. This will require uncommenting the line containing `recompute_granularity` in the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file. How do the `Step time` and `Throughput per GPU` metrics change as compared to the baseline run for which this setting was not enabled? Explain the reasons for the observed differences.
 
+    ```
+    The 
+
     b. Increase `model.seq_length` and `dataset.sequence_length` to 16384. Run the training without activation recomputation, and with `recompute_granularity` set to `full` and `selective`. How do the `Step time` and `Throughput per GPU` metrics compare for these three cases? If you encounter an error for any of these cases, explain the likely reasons. 
 
     c. Apart from the case of large sequence lengths, what are some other scenarios where activation recomputation may be useful?
 
-Try training the model with and without activation recomputation. What is the effect on the training time and throughput? 
-
+```
+It may be needed when training models with a large number of parameters as the hidden size would be large in such cases. It may also be required when using large batch size.
+```
 
 
 
@@ -82,4 +86,5 @@ Try training the model with and without activation recomputation. What is the ef
 # References
 
 * [Nanotron UltraScale Playbook](https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=high-level_overview)
-
+* 
+* [Visualizing 6D Mesh Parallelism](https://main-horse.github.io/posts/visualizing-6d/#pipelining-and-fsdp)
