@@ -12,11 +12,12 @@ model:
   # Activation recomputation
   # See megatron-lm/megatron/core/transformer/transformer_config.py for explanation of parameters
   # Options are None (default), "full", "selective". Comment out next line to disable activation recomputation.
-  # recompute_granularity: "full"
+  # recompute_granularity: "selective"
   # Options are None (default), "uniform", "block"
   recompute_method: "uniform"
-  # Options are None (default) or an integer
-  recompute_num_layers: 1
+  # Options are None (default) or an integer. 
+  # Set to null if recompute_granularity is selective
+  recompute_num_layers: null
   # Set to true to enable CPU offloading. This currently produces a ListIndexOutOfRange error.
   cpu_offloading: false
   cpu_offloading_num_layers: 10
