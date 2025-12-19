@@ -81,7 +81,7 @@ rng:
 
 ddp:
   grad_reduce_in_fp32: true 
-  overlap_param_gather: false
+  overlap_param_gather: true
   use_distributed_optimizer: true
 
 profiling:
