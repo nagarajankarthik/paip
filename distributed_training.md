@@ -74,7 +74,7 @@ As the global batch size becomes very large, the number of samples processed per
 
 ---Answer End---
 
-2. Try running the training with the `micro_batch_size` parameter in the `train` section (i.e. `train.micro_batch_size`) set to 2, 4, 8 and 16. How does the throughput vary with micro batch size?
+2. Try running the training with the `micro_batch_size` parameter in the `train` section (i.e. `train.micro_batch_size`) set to 2, 4, 8 and 16. How does the throughput vary with micro batch size? If you obtain an error for any of these cases, explain the likely reasons.
 
 ---Answer Begin---
 
@@ -85,10 +85,11 @@ As the global batch size becomes very large, the number of samples processed per
 | 4 | 2.06 | 398.66 |
 | 8 | 1.96 | 419.49 |
 
+Increasing the micro batch size results in a considerable increase in throughput. The extent of increase is significantly greater than that obtained by increasing the global batch size. This is because tensors of larger size can be used to perform the computation in each forward and backward pass. Hence, the time required for each forward and backward pass increases less than proportionately to the extent of increase in batch size, which improves the training efficiency.
+
+However, there is a limit to how large the micro batch size can be. For a micro batch size of 16, a CUDA out of memory error is encountered. In this case, the vRAM available on a single GPU is insufficient to store the activations for the entire batch.
+
 __Answer End__
-
-
-
 
 
 
