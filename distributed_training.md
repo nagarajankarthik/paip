@@ -27,7 +27,7 @@ Answer the following questions:
 
 ## Practical
 
-The hands-on exercises will involve training the Qwen3-4B model using the [Megatron-Bridge](https://github.com/NVIDIA-NeMo/Megatron-Bridge/tree/main) framework. The training parameters can be configured using the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file. The existing set of parameters should be used as a baseline for comparison.
+The hands-on exercises will involve training the Qwen3-4B model using the [Megatron-Bridge](https://github.com/NVIDIA-NeMo/Megatron-Bridge/tree/main) framework. The training parameters can be configured using the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file. The existing set of parameters should be used as a baseline for comparison. All training runs in this section should be performed using a single H200 GPU.
 
 
 Perform an initial training run without changing any parameters in the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file. Take note of the following results from the training logs:
@@ -128,6 +128,39 @@ __Answer End__
 
     ---Answer End---
 
+TODO: Try to run the training for long sequence lengths with activation offloading to CPU. Enabling this setting causes a ListIndexOutOfRange error when using the `nemo:25.09.nemotron_nano_v2_vl` container.
+
+
+# Data Parallelism
+
+
+## Theory
+
+Read the section entitled "Data Parallelism" in the [Nanotron UltraScale Playbook](https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=data_parallelism).
+
+Answer the following questions:
+
+
+1. What is the problem with a naive implementation of data parallelism in which the all-reduce operation to aggregate gradients is only triggered after the backward pass?
+
+2. What are the 3 methods that can be used to improve the efficiency of distributed data parallelism?
+
+3. What is the relationship between global batch size, micro batch size, number of gradient accumulation steps and number of data parallel ranks?
+
+4. What are some limitations of using distributed data parallelism with the model parameters, gradients and optimizer states replicated across all ranks?
+
+5. How does Zero-1 improve the efficiency of distributed data parallelism? How does it change the type of communication operations performed during training?
+
+6. What is the difference between Zero-1 and Zero-2?
+
+7. Explain the difference between Zero-2 and Zero-3. 
+
+8. What is prefetching?
+
+9. What is the key limitation of the ZeRO technique?
+
+
+## Practical
 
 
 
