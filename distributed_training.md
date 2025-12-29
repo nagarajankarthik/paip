@@ -133,6 +133,7 @@ TODO: Try to run the training for long sequence lengths with activation offloadi
 
 # Data Parallelism
 
+A total of 4 H200 GPUs will be used for this task.
 
 ## Theory
 
@@ -143,13 +144,13 @@ Answer the following questions:
 
 1. What is the problem with a naive implementation of data parallelism in which the all-reduce operation to aggregate gradients is only triggered after the backward pass?
 
-2. What are the 3 methods that can be used to improve the efficiency of distributed data parallelism?
+2. What are the 3 methods that can be used to improve the efficiency of distributed data parallelism (DDP)?
 
 3. What is the relationship between global batch size, micro batch size, number of gradient accumulation steps and number of data parallel ranks?
 
-4. What are some limitations of using distributed data parallelism with the model parameters, gradients and optimizer states replicated across all ranks?
+4. What are some limitations of using DDP with the model parameters, gradients and optimizer states replicated across all ranks?
 
-5. How does Zero-1 improve the efficiency of distributed data parallelism? How does it change the type of communication operations performed during training?
+5. How does Zero-1 improve the efficiency of DDP? How does it change the type of communication operations performed during training?
 
 6. What is the difference between Zero-1 and Zero-2?
 
@@ -162,7 +163,18 @@ Answer the following questions:
 
 ## Practical
 
+1. Run a DDP training job using the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file with the number of data parallel (DP) ranks set to 2 and 4. How does the throughput change with varying number of DP ranks?
 
+---Answer Begin---
+
+| DP Ranks | Step time (s) | Throughput per GPU (TFLOP/s/GPU) |
+| --- | --- | --- |
+| 1 | 4.10 | 200.33 |
+| 2 | 4.10 | 200.33 |
+| 4 | 5.11 | 160.72 |
+
+
+---Answer End---
 
 # References
 
