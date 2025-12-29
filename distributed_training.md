@@ -163,15 +163,44 @@ Answer the following questions:
 
 ## Practical
 
-1. Run a DDP training job using the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file with the number of data parallel (DP) ranks set to 2 and 4. How does the throughput change with varying number of DP ranks?
+1. Run a DDP training job using the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file with the number of data parallel (DP) ranks set to 2 and 4. How does the throughput change with varying number of DP ranks? 
+
+Note that Megatron-LM internally calculates the number of DP ranks as `dp_size = world_size/(tp_size * pp_size * cp_size)` in `/megatron/core/parallel_state.py`. In this section, the number of DP ranks will always be equal to the world size since `tp_size = pp_size = cp_size = 1`. The `world_size` parameter can be adjusted using the `--nproc-per-node` flag in the torchrun command used to run the training.
+
+---Answer Begin---
+
+For some reason, the Megatron-Bridge throughput is slightly different for the distributed and non-distributed optimizer cases even when running on a single GPU (i.e. world size = 1). All the results above are for the distributed optimizer case. The results for the single DP rank case in the following table were obtained for the non-distributed optimizer case.
+
+
+| DP Ranks | Step time (s) | Throughput per GPU (TFLOP/s/GPU) |
+| --- | --- | --- |
+| 1 | 3.92 | 209.16 |
+| 2 | 2.05 | 199.92 |
+| 4 | 1.10 | 186.76 |
+
+The throughput per GPU decreases slightly with increasing number of DP ranks. This is because the communication overhead of the all-reduce operation used to synchronize gradients across devices increases as the number of DP ranks increases, since the total volume of data exchanged increases.
+
+---Answer End---
+
+2. Repeat the 3 runs as question 1 using the same numbers of DP ranks but with the `overlap_grad_reduce` parameter set to `False` in the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file. Does the throughput change as compared to the corresponding runs in question 1?
+
 
 ---Answer Begin---
 
 | DP Ranks | Step time (s) | Throughput per GPU (TFLOP/s/GPU) |
 | --- | --- | --- |
-| 1 | 4.10 | 200.33 |
-| 2 | 4.10 | 200.33 |
-| 4 | 5.11 | 160.72 |
+| 1 | 3.90 | 210.23 |
+| 2 | 2.05 | 199.86 |
+| 4 | 1.10 | 186.07 |
+
+There is no significant change in the throughput when `overlap_grad_reduce` is set to `False`. The throughput per device still decreases to the same extent with increasing number of DP ranks. 
+
+There are two reasons for this:
+
+1. The communication of gradients cannot be completely overlapped with the backward pass since the gradients for the first few layers can only be all reduced after tha backward pass is complete.
+
+2. Overlapping computation with communication results in concurrent execution of multiple kernels in different CUDA streams. As explained [here](https://anakli.inf.ethz.ch/papers/gpu_interference_socc25.pdf), This can lead to competition for GPU resources such as L2 cache, memory bandwidth, warp scheduling and compute pipelines.
+
 
 
 ---Answer End---
