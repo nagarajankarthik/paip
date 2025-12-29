@@ -85,6 +85,7 @@ rng:
 ddp:
   grad_reduce_in_fp32: true 
   overlap_param_gather: true
+  overlap_grad_reduce: true
   use_distributed_optimizer: false
   data_parallel_sharding_strategy: "no_shard"
 
@@ -92,8 +93,8 @@ profiling:
   # For optional fields in the config, specify the target to instantiate the object.
   _target_: megatron.bridge.training.config.ProfilingConfig
   use_nsys_profiler: false
-  profile_step_start: 5
+  profile_step_start: 9
   profile_step_end: 10
-  use_pytorch_profiler: false
+  use_pytorch_profiler: true
   profile_ranks: [0, 1]
   record_shapes: true
