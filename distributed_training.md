@@ -182,7 +182,7 @@ The throughput per GPU decreases slightly with increasing number of DP ranks. Th
 
 ---Answer End---
 
-2. Repeat the 3 runs as question 1 using the same numbers of DP ranks but with the `overlap_grad_reduce` parameter set to `False` in the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file. Does the throughput change as compared to the corresponding runs in question 1?
+2. Repeat the 3 runs as question 1 using the same numbers of DP ranks but with the `overlap_grad_reduce` parameter set to `False` in the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file. Does the throughput change as compared to the corresponding runs in question 1? Do not worry about trying to explain the reasons for your observations as they will be explored in the next question.
 
 
 ---Answer Begin---
@@ -197,11 +197,30 @@ There is no significant change in the throughput when `overlap_grad_reduce` is s
 
 There are two reasons for this:
 
-1. The communication of gradients cannot be completely overlapped with the backward pass since the gradients for the first few layers can only be all reduced after tha backward pass is complete.
+i. The communication of gradients cannot be completely overlapped with the backward pass since the gradients for the first few layers can only be all reduced after the backward pass is complete.
 
-2. Overlapping computation with communication results in concurrent execution of multiple kernels in different CUDA streams. As explained [here](https://anakli.inf.ethz.ch/papers/gpu_interference_socc25.pdf), This can lead to competition for GPU resources such as L2 cache, memory bandwidth, warp scheduling and compute pipelines.
+ii. Overlapping computation with communication results in concurrent execution of multiple kernels in different CUDA streams. As explained [here](https://anakli.inf.ethz.ch/papers/gpu_interference_socc25.pdf), this can lead to competition for GPU resources such as L2 cache, memory bandwidth, warp scheduling and compute pipelines.
+
+---Answer End---
+
+3. Profiling is a useful tool to understand the effects of various parallelism configurations. Repeat the training run in question 1 for the 2 GPU case with Pytorch profiling enabled. 
+
+This requires setting the `use_pytorch_profiler` parameter to 'true' in the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file. The profiling traces will be generated as files with the `.pt.trace.json` extension in the `nemo_experiments/default/tb_logs` subfolder of your working directory. Download one of the files and visualize them using the [Perfetto UI](ui.perfetto.dev).
 
 
+When analyzing the traces, pay specific attention to the following points:
+
+a. How many streams are present in the trace? What is the purpose of each stream? More information regarding CUDA streams can be found [here](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#streams) and [here](https://docs.pytorch.org/docs/stable/notes/cuda.html#cuda-semantics).
+b. Which are the operations that account for the largest proportion of total wall duration in each stream? How many times were these operations executed? What is the average wall duration of these operations?
+c. Do any of the operations identified in (b) take longer than average when overlapped with an operation from a different stream?
+d. Are the executions of kernels on different streams perfectly overlapped? If not, what is preventing this from happening?
+
+---Answer Begin---
+
+a. There are 2 streams in the trace. Stream 7 is for computation while stream 35 is for communication. In this case, communication occurs through the all-reduce operation.
+b. In the computation stream, the `nvjet_tss_128x256_64x4_2x1_v_badd_coopA_NTN` kernel accounts for the largest proportion of total wall duration. It is executed 1152 times. The average wall duration of this kernel is 157.9 $\mu$s. In the communication stream, the `all_reduce` operation accounts for the largest proportion of total wall duration. It is executed 72 times. The average wall duration of this operation is 792.3 $\mu$s.
+c. The `nvjet_tss_128x256_64x4_2x1_v_badd_coopA_NTN` kernel execution time takes significantly longer than average when overlapped with the nccl kernel responsible for the all-reduce operation. This is likely caused by the two kernels competing for the same resources on the GPU as explained [here](https://anakli.inf.ethz.ch/papers/gpu_interference_socc25.pdf).
+d. The all-reduce operation is not entirely overlapped with the execution of the computation kernels. The gradients for the first few layers can only be synchronized after the backward pass is complete.
 
 ---Answer End---
 
