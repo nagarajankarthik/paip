@@ -221,8 +221,11 @@ d. Are the executions of kernels on different streams perfectly overlapped? If n
 ---Answer Begin---
 
 a. There are 2 streams in the trace. Stream 7 is for computation while stream 35 is for communication. In this case, communication occurs through the all-reduce operation.
+
 b. In the computation stream, the `nvjet_tss_128x256_64x4_2x1_v_badd_coopA_NTN` kernel accounts for the largest proportion of total wall duration. It is executed 1152 times. The average wall duration of this kernel is 157.9 $\mu$s. In the communication stream, the `all_reduce` operation accounts for the largest proportion of total wall duration. It is executed 72 times. The average wall duration of this operation is 792.3 $\mu$s.
+
 c. The `nvjet_tss_128x256_64x4_2x1_v_badd_coopA_NTN` kernel execution time takes significantly longer than average when overlapped with the nccl kernel responsible for the all-reduce operation. This is likely caused by the two kernels competing for the same resources on the GPU as explained [here](https://anakli.inf.ethz.ch/papers/gpu_interference_socc25.pdf).
+
 d. The all-reduce operation is not entirely overlapped with the execution of the computation kernels. The gradients for the first few layers can only be synchronized after the backward pass is complete.
 
 ---Answer End---
@@ -230,7 +233,9 @@ d. The all-reduce operation is not entirely overlapped with the execution of the
 # References
 
 * [Nanotron UltraScale Playbook](https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=high-level_overview)
-* 
+* [Cuda Programming Guide - Cuda Streams](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#streams)
+* [PyTorch documentation on CUDA streams](https://docs.pytorch.org/docs/stable/notes/cuda.html#cuda-streams)
+* [Explanation of Pytorch Distributed Data Parallelism](https://medium.com/@arjunsrinivasan.a/demystifying-pytorch-distributed-data-parallel-ddp-an-inside-look-6d0d42a645ff)
 * [Visualizing 6D Mesh Parallelism](https://main-horse.github.io/posts/visualizing-6d/#pipelining-and-fsdp)
 * [DeepSpeed Pipeline Paralleism](https://www.deepspeed.ai/tutorials/pipeline/)
 * [Megatron Parallelism Guide](https://docs.nvidia.com/nemo/megatron-bridge/latest/parallelisms.html#data-parallelism)
