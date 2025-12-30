@@ -95,6 +95,6 @@ profiling:
   use_nsys_profiler: false
   profile_step_start: 9
   profile_step_end: 10
-  use_pytorch_profiler: true
+  use_pytorch_profiler: false
   profile_ranks: [0, 1]
   record_shapes: true
