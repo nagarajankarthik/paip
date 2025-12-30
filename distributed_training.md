@@ -211,8 +211,11 @@ This requires setting the `use_pytorch_profiler` parameter to 'true' in the [qwe
 When analyzing the traces, pay specific attention to the following points:
 
 a. How many streams are present in the trace? What is the purpose of each stream? More information regarding CUDA streams can be found [here](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#streams) and [here](https://docs.pytorch.org/docs/stable/notes/cuda.html#cuda-semantics).
+
 b. Which are the operations that account for the largest proportion of total wall duration in each stream? How many times were these operations executed? What is the average wall duration of these operations?
+
 c. Do any of the operations identified in (b) take longer than average when overlapped with an operation from a different stream?
+
 d. Are the executions of kernels on different streams perfectly overlapped? If not, what is preventing this from happening?
 
 ---Answer Begin---
