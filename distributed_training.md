@@ -294,7 +294,9 @@ Results for FSDP with optimizer state, gradients and model parameter sharding:
 
 The memory footprint per GPU progressively decreases as the number of data parallel ranks increases and as more quantities are sharded. 
 
-The throughput per GPU for the case in which both optimizer states and gradients are sharded is similar to the case in which only optimizer states are sharded. In comparison, the throughput per device decreases slightly if the model parameters are also sharded across data parallel ranks. 
+The throughput per GPU for the case in which both optimizer states and gradients are sharded is similar to the case in which only optimizer states are sharded. In comparison, the throughput per device decreases slightly if the model parameters are also sharded across data parallel ranks.
+
+The sharding of model parameters requires all-gather operations to be performed during the forward and backward passes to materialize the parameters of the layer for which the computation is being performed. If the gradients are also sharded, reduce-scatter operations are also required to assign each DP rank its shard of the gradients. When the backward pass is overlapped with these communication operations, the resulting kernel interference increases the time required to perform the computation for the backward pass. This results in a slight decrease in throughput.
 
 ---Answer End---
 
