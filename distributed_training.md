@@ -300,6 +300,14 @@ The sharding of model parameters requires all-gather operations to be performed 
 
 ---Answer End---
 
+
+# Tensor Parallelism
+
+## Theory
+
+Read the section entitled "Tensor Parallelism" in the [Nanotron UltraScale Playbook](https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=tensor_parallelism).
+
+
 # References
 
 * [Nanotron UltraScale Playbook](https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=high-level_overview)
