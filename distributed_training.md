@@ -286,13 +286,15 @@ Results for FSDP with optimizer state and gradient sharding:
 
 Results for FSDP with optimizer state, gradients and model parameter sharding:
 
-TODO: Add results for these tests 
-
 | DP Ranks | Step time (s) | Throughput per GPU (TFLOP/s/GPU) | Memory per GPU (GB) |
 | --- | --- | --- | --- |
-| 1 | 5.43 | 151.12 | 72.60 |
-| 2 | 2.78 | 147.78 | 40.33 |
-| 4 | 1.48 | 138.62 | 36.39 |
+| 1 | 5.74 | 142.86 | 72.67 |
+| 2 | 3.05 | 134.39 | 38.22 |
+| 4 | 1.55 | 132.60 | 20.04 |
+
+The memory footprint per GPU progressively decreases as the number of data parallel ranks increases and as more quantities are sharded. 
+
+The throughput per GPU for the case in which both optimizer states and gradients are sharded is similar to the case in which only optimizer states are sharded. In comparison, the throughput per device decreases slightly if the model parameters are also sharded across data parallel ranks. 
 
 ---Answer End---
 
