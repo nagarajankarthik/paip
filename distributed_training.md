@@ -238,7 +238,7 @@ The answer is stated in question 2.
 
 ---Answer End---
 
-5. Run the training on 1, 2 and 4 GPUs using the ZeRO-1 technique. This requires setting the `use_megatron_fsdp` and `use_distributed_optimizer` parameters to 'true' in the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file. The `ckpt_format` parameter should be set to `fsdp_dtensor`. Compare the throughput and memory usage for DDP and FSDP ZeRO-1. Use the PyTorch profiler to obtain additional insights into the obtained results, if required. 
+5. Run the training on 1, 2 and 4 GPUs using FSDP with optimizer state sharding only. This requires setting the `use_megatron_fsdp` and `use_distributed_optimizer` parameters to 'true' in the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file. The `data_parallel_sharding_strategy` parameter should be set to `optim`. The `ckpt_format` parameter should be set to `fsdp_dtensor`. Compare the throughput and memory usage for DDP and FSDP with optimizer state sharding. Run the PyTorch profiler for the FSDP case to obtain additional insights into the results. In this case, pay special attention to the profiling trace for the host (CPU) side. The traces for the various CPU threads are typically labelled using large integers such as `python 1789435`. You may also find it useful to go through [this paper](https://arxiv.org/abs/2304.11277), which explains the fundamentals of FSDP. 
 
 
 ---Answer Begin---
@@ -254,7 +254,7 @@ Results for DDP with non-distributed optimizer using `nemo:25.11` container. The
 | 4 | 1.13 | 181.03 | 73.65 |
 
 
-Results for FSDP ZeRO-1:
+Results for FSDP:
 
 | DP Ranks | Step time (s) | Throughput per GPU (TFLOP/s/GPU) | Memory per GPU (GB) |
 | --- | --- | --- | --- |
@@ -262,14 +262,37 @@ Results for FSDP ZeRO-1:
 | 2 | 2.77 | 147.96 | 48.46 |
 | 4 | 1.48 | 138.62 | 36.39 |
 
-The throughput is consistently smaller for FSDP ZeRO-1 as compared to DPP, even for the single GPU case. The PyTorch GPU profiling trace for FSDP ZeRO-1 shows a larger gap between successive kernel launches during the forward pass. The CPU profiling trace shows that there is considerable overhead associated with processing various hooks before and after the forward and backward passes through each FSDP unit.
+The throughput is consistently smaller for FSDP as compared to DPP, even for the single GPU case. The PyTorch CPU profiling trace shows that the FSDP run invokes several hooks before and/or after the forward and backward passes through each FSDP unit. The need to process these hooks on the CPU side before and/or after every forward and backward pass through each FSDP unit increases the time interval between the launch of kernels that perform computation on the GPU, which reduces the throughput as compared to DDP. Two of the important functions performed by these hooks include: 
 
+* Coordination of computation and communication operations. See section 4.3 of the [FSDP paper](https://arxiv.org/abs/2304.11277).
 
-From the profiling trace, it is seen that the FSDP ZeRO-1 run involves an all-reduce operation to synchronize gradients and an all-gather operation to collect the updated values of model parameters. In DDP, only the all-reduce operation is performed. 
+* Performing flatten and unflatten operations on parameters to facilitate computation using `FlatParameter` objects.
 
-In addition, neither communication operation is overlapped with computation in FSDP ZeRO-1, unlike the case of DDP. For these reasons, the throughput per GPU decreases.
+The key advantage of FSDP is the lower memory footprint per GPU as compared to DDP. For large models, this consideration becomes important.
 
-The key advantage of FSDP ZeRO-1 is the lower memory footprint per GPU as compared to DDP. For large models, this consideration becomes important.
+---Answer End---
+
+6. Perform training using FSDP on 1, 2 and 4 GPUs for two additional cases. In the first case, shard the optimizer states and gradients by setting `data_parallel_sharding_strategy` to `optim_grads`. In the second case, include the model parameters in the sharding by setting this parameter to `optim_grads_params`. Compare the results for these two cases with those obtained in question 5. 
+
+---Answer Begin---
+
+Results for FSDP with optimizer state and gradient sharding:
+
+| DP Ranks | Step time (s) | Throughput per GPU (TFLOP/s/GPU) | Memory per GPU (GB) |
+| --- | --- | --- | --- |
+| 1 | 5.43 | 151.12 | 72.60 |
+| 2 | 2.78 | 147.78 | 40.33 |
+| 4 | 1.46 | 140.59 | 24.25 |
+
+Results for FSDP with optimizer state, gradients and model parameter sharding:
+
+TODO: Add results for these tests 
+
+| DP Ranks | Step time (s) | Throughput per GPU (TFLOP/s/GPU) | Memory per GPU (GB) |
+| --- | --- | --- | --- |
+| 1 | 5.43 | 151.12 | 72.60 |
+| 2 | 2.78 | 147.78 | 40.33 |
+| 4 | 1.48 | 138.62 | 36.39 |
 
 ---Answer End---
 
@@ -283,3 +306,4 @@ The key advantage of FSDP ZeRO-1 is the lower memory footprint per GPU as compar
 * [DeepSpeed Pipeline Paralleism](https://www.deepspeed.ai/tutorials/pipeline/)
 * [Megatron Parallelism Guide](https://docs.nvidia.com/nemo/megatron-bridge/latest/parallelisms.html#data-parallelism)
 * [Megatron Performance Guide](https://docs.nvidia.com/nemo/megatron-bridge/latest/performance-guide.html#long-sequence-training)
+* [PyTorch FSDP](https://arxiv.org/abs/2304.11277)
