@@ -8,6 +8,7 @@ model:
   pipeline_dtype: torch.bfloat16
   context_parallel_size: 1
   expert_model_parallel_size: 1
+  sequence_parallel: false
   seq_length: 1024
   # Activation recomputation
   # See megatron-lm/megatron/core/transformer/transformer_config.py for explanation of parameters
@@ -59,6 +60,8 @@ checkpoint:
   fully_parallel_save: true
   ckpt_step: 200
   load: /scratch_aisg/karthik/paip/qwen3_4b_megatron
+  # Only enable if using Megatron FSDP
+  # ckpt_format: fsdp_dtensor
   # load_optim: false
   # load_rng: false
 
