@@ -574,11 +574,46 @@ One encounters a CUDA Out of Memory error if the training is performed on a sing
 
 Read the section entitled "Context Parallelism" in the [Nanotron UltraScale Playbook](https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=context_parallelism).
 
-Answer the following questions:
+Checklist of key concepts:
 
-1. How does context parallelism (CP) differ from combining tensor and sequence parallelism?
-2. Explain the concept of ring attention. Why is it necessary when applying context parallelism to attention blocks?
-3. How does zig-zag ring attention distribute the computation load evenly across CP ranks?
+1. Difference between context parallelism (CP) and and tensor and sequence parallelism in combination.
+2. Need for ring attention when using CP.
+3. Use of zig-zag ring attention to distribute the computation load evenly across CP ranks.
+
+## Check your understanding
+
+1. Which of the following statements regarding context parallelism are true? Select all that apply.
+
+<ol type="a">
+<li>In regions of the model where TP is used, CP shards the activations along the sequence dimension. TP uses a similar mechanism with the only difference being that the sharding is performed along the hidden dimension.</li>
+<li> CP does not require any communication for operations in which each token is processed independently of the others.</li>
+<li> CP shards both model weights and activations.</li>
+</ol>
+
+Answer: **All statements are false.**
+
+Explanation:
+- Statement a is **false**. The mechanisms by which TP and CP operate are fundamentally different. CP shards the activations along the sequence dimension. TP shards the weights matrices but does not directly shard the activations. The distribution of activations along the hidden dimension across GPUs arises as a result of a forward pass through a linear layer sharded using the column-linear strategy. 
+- Statement b is **false**. Although modules such as MLP and LayerNorm process each token independently of the others, an all-reduce operation is required to aggregate the gradients from all CP ranks.
+- Statement c is **false**. CP shards the activations but not the model weights. The key difference between CP and SP is that CP shards the activations along the sequence dimension throughout every layer while SP performs this sharding only in regions where TP is not used.
+
+
+2. Which of the following statements regarding ring attention are true? Select all that apply.
+
+<ol type="a">
+<li> Ring attention is needed when using CP because each GPU needs to access the key and value vectors for all tokens up to and including its shard of the sequence.</li>
+<li> For fixed values of batch size and sequence length, the total volume of data transmitted per GPU during ring attention decreases as the CP degree increases.</li>
+<li> For a fixed CP degree, the number of communication steps is proportional to the batch size and sequence length.</li>
+</ol>
+
+
+Answer: **a only.**
+
+Explanation:
+- Statement a is **true**. Using CP means that each GPU only holds the query, key and value tensors for its shard of the sequence at the beginning of the self-attention calculation. Ring attention is an efficient means of communicating the necessary key and value tensors to each GPU for the purpose of calculating the attention scores.
+- Statement b is **false**. Ring attention involves $c_p - 1$ communication steps, where $c_p$ is the CP degree. During each step, the total volume of data transmitted per GPU is $s/c_p$, where $s$ is the total sequence length. Hence, the total volume of data transmitted per GPU during ring attention is $(s/c_p) * (c_p - 1)$. The factor $(c_p - 1)/c_p$ is a monotonically increasing function of $c_p$ which is bounded above by 1. Therefore, the total volume of data communicated increases with $c_p$. As $c_p$ increases, the rate of increase decreases.
+- Statement c is **false**. The number of communication steps in ring attention is $c_p - 1$, which does not depend on batch size or sequence length.
+
 
 ## Practical
 
