@@ -494,6 +494,31 @@ Checklist of key concepts:
 
 </ol>
 
+Answer: ** a and c. **
+
+Explanation:
+
+- Statement a is **true**. For long sequence lengths, the activations is the component with the largest memory footprint. For a sufficiently large model, the use of FSDP may be insufficient to perform training even with a micro-batch size of 1, unless activation recomputation is enabled. TP can be a useful option in such situations.
+- Statement b is **false**. The optimal strategy involves sharding the first layer using the column-linear strategy and the second layer using the row-linear strategy. This enables the forward pass to be performed for both layers using a single all-reduce operation. If the opposite strategy is used, the forward pass would require an all-reduce after the row-linear layer and an all-gather after the column-linar layer, thereby increasing the communication overhead. 
+- Statement c is **true**. The need to introduce communication operations along the critical path of computation results in the throughput per GPU being sensitive to the speed of data transfer between them. Since the speed of data transfer is greater between GPUs on the same node as compared to GPUs on different nodes, a significant decrease in throughput is observed when TP is used across nodes.
+
+2. Which of the following statements regarding sequence parallelism (SP) are true? Select all that apply.
+
+<ol type="a">
+
+<li> Both SP and TP are applied simultaneously to the same operations. </li>
+<li> SP shards the activations along the sequence dimension while TP shards the weight matrices. </li>
+<li> Combining TP and SP is equivalent to using TP alone in terms of communication overhead but offers additional memory savings. </li>
+
+</ol>
+
+Answer: ** b and c. **
+
+Explanation:
+
+- Statement a is **false**. SP and TP can be used in tandem but parallelize different operations. Specifically, SP is applied to the Dropout and LayerNorm operations while TP is applied to the self-attention and MLP operations.
+- Statement b is **true**. Operations such as LayerNorm require access to the full hidden dimension for the purpose of calculating quantities such as mean and variance. Since these calculations can be performed independently for the various tokens comprising a sequence, SP is a natural choice for parallelizing such operations efficiently.
+- Statement c is **true**. When using TP alone, all-reduce operations are required to obtain correct values of activations when exiting a TP region. In the TP + SP case, these all-reduce operations would be replaced by reduce-scatter operations. Hence, the final tensor saved in memory following the execution of a TP region would have dimensions [`batch_size`, `sequence_length`, `hidden_size`]. In the SP case, this decreases to [`batch_size`, `sequence_length`/`TP_degree`, `hidden_size`], thereby reducing the memory footprint of the activations by a factor of `TP_degree`.
 
 ## Practical
 
