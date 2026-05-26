@@ -267,7 +267,7 @@ Checklist of key concepts:
 
 </ol>
 
-Answer: ** a, b and c.**
+Answer: **a, b and c.**
 
 Explanation:
 - Statement a is **true**. In DDP , the parameters, gradients and optimizer states are replicated across all ranks. The model parameters and optimizer states will always have identical values on all ranks. Each rank computes different gradients for the model parameters, since it processes its own shard of the global batch. Hence, the gradients are all-reduced on all ranks before the optimizer step.
@@ -335,8 +335,7 @@ For some reason, the Megatron-Bridge throughput is slightly different for the di
 | 4        | 1.10          | 186.76                           |
 
 
-The throughput per GPU decreases slightly with increasing number of DP ranks. This is because the communication overhead of the all-reduce operation used to synchronize gradients across devices increases as the number of DP ranks increases, since the total volume of data exchanged increases.
-
+The throughput per GPU decreases slightly with increasing number of DP ranks. As explained [here](https://apxml.com/courses/optimization-techniques-ml/chapter-5-distributed-ml-optimization/all-reduce-algorithms), an all-reduce operation can be thought of as performing a reduce-scatter, followed by an all-gather operation. Each of these operations require $(N - 1)$ communication steps, where $N$ is the number of DP ranks. In each communication step, a single GPU sends $M/N$ bytes of data to another rank, where $M$ is the total size of the data to be all-reduced. Hence, the total volume of data sent by a single GPU during an all-reduce operation is given by $2(N - 1)M/N$. Since the factor $(N - 1)/N$ asymptotically approaches one as $N$ increases, the total number of bytes sent increases over the range of $N$ tested. This increase in communication overhead may reduce the throughput for small values of $N$. 
 
 
 Q2) Repeat the 3 runs as question 1 using the same numbers of DP ranks but with the `overlap_grad_reduce` parameter set to `False` in the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file. Does the throughput change as compared to the corresponding runs in question 1? Do not worry about trying to explain the reasons for your observations as they will be explored in the next question.
@@ -350,7 +349,7 @@ A2)
 | 4        | 1.10          | 186.07                           |
 
 
-There is no significant change in the throughput when `overlap_grad_reduce` is set to `False`. The throughput per device still decreases to the same extent with increasing number of DP ranks. 
+There is no significant change in the throughput when `overlap_grad_reduce` is set to `False`. The throughput per device still decreases to the same extent with increasing number of DP ranks. The re
 
 There are two reasons for this:
 
