@@ -145,8 +145,11 @@ The `Step time` and `Throughput` metrics may exhibit slight variation with repea
 
 A1)
 
+
+The Megatron-Bridge throughput is slightly different for the distributed and non-distributed optimizer cases even when running on a single GPU (i.e. world size = 1). All results presented are for the **non-distributed** optimizer case, unless mentioned otherwise.
+
 Average Step Time: 3.37 s
-Average GPU Utilization: 218.03 TFLOP/s/GPU
+Average GPU Utilization: 243.23 TFLOP/s/GPU
 Allocated Memory : 73.65 GB
 
 Perform the following experiments:
@@ -325,7 +328,6 @@ A1)
 
 Note that Megatron-LM internally calculates the number of DP ranks as `dp_size = world_size/(tp_size * pp_size * cp_size)` in `/megatron/core/parallel_state.py`. In this section, the number of DP ranks will always be equal to the world size since `tp_size = pp_size = cp_size = 1`. The `world_size` parameter can be adjusted using the `--nproc-per-node` flag in the torchrun command used to run the training.
 
-For some reason, the Megatron-Bridge throughput is slightly different for the distributed and non-distributed optimizer cases even when running on a single GPU (i.e. world size = 1). All the results above are for the distributed optimizer case. The results for the single DP rank case in the following table were obtained for the non-distributed optimizer case.
 
 
 | DP Ranks | Step time (s) | Throughput per GPU (TFLOP/s/GPU) |
@@ -349,13 +351,9 @@ A2)
 | 4        | 1.10          | 186.07                           |
 
 
-There is no significant change in the throughput when `overlap_grad_reduce` is set to `False`. The throughput per device still decreases to the same extent with increasing number of DP ranks. The re
+There is no significant change in the throughput when `overlap_grad_reduce` is set to `False`. The throughput per device still decreases to the same extent with increasing number of DP ranks.
 
-There are two reasons for this:
-
-i. The communication of gradients cannot be completely overlapped with the backward pass since the gradients for the first few layers can only be all reduced after the backward pass is complete.
-
-ii. Overlapping computation with communication results in concurrent execution of multiple kernels in different CUDA streams. As explained [here](https://anakli.inf.ethz.ch/papers/gpu_interference_socc25.pdf), this can lead to competition for GPU resources such as L2 cache, memory bandwidth, warp scheduling and compute pipelines.
+The reasons are discussed in Q4.
 
 
 
@@ -389,17 +387,16 @@ A3)
 Q4) Use the findings from question 3 to explain why the throughput per device does not change significantly when the `overlap_grad_reduce` parameter is set to `false` in the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file.
 
 
+There are two reasons for this:
 
-The answer is stated in question 2.
+i. The communication of gradients cannot be completely overlapped with the backward pass since the gradients for the first few layers can only be all reduced after the backward pass is complete.
 
-
+ii. Overlapping computation with communication results in concurrent execution of multiple kernels in different CUDA streams. As explained [here](https://anakli.inf.ethz.ch/papers/gpu_interference_socc25.pdf), this can lead to competition for GPU resources such as L2 cache, memory bandwidth, warp scheduling and compute pipelines.
 
 Q5) Run the training on 1, 2 and 4 GPUs using FSDP with optimizer state sharding only. This requires setting the `use_megatron_fsdp` and `use_distributed_optimizer` parameters to 'true' in the [qwen3_pretrain_override.yaml](qwen3_pretrain_override.yaml) file. The `data_parallel_sharding_strategy` parameter should be set to `optim`. The `ckpt_format` parameter should be set to `fsdp_dtensor`. Compare the throughput and memory usage for DDP and FSDP with optimizer state sharding. Run the PyTorch profiler for the FSDP case to obtain additional insights into the results. In this case, pay special attention to the profiling trace for the host (CPU) side. The traces for the various CPU threads are typically labelled using large integers such as `python 1789435`. You may also find it useful to go through [this paper](https://arxiv.org/abs/2304.11277), which explains the fundamentals of FSDP.
 
 A5)
 
-
-All results from this point onwards are obtained using the `nemo:25.11` container because neither the Megatron nor the Torch variants of FSDP work correctly with the `nemo:25.09.nemotron_nano_v2_vl` container.
 
 Results for DDP with non-distributed optimizer using `nemo:25.11` container. The `Memory per GPU (GB)` column refers to the 'mem-allocated-gigabytes' field from the logs after one training iteration:
 
@@ -457,6 +454,18 @@ Results for FSDP with optimizer state, gradients and model parameter sharding:
 The memory footprint per GPU progressively decreases as the number of data parallel ranks increases and as more quantities are sharded. 
 
 The throughput per GPU for the case in which both optimizer states and gradients are sharded is similar to the case in which only optimizer states are sharded. In comparison, the throughput per device decreases slightly if the model parameters are also sharded across data parallel ranks.
+
+
+The following table summarizes the communication operations that must be performed during the forward and backward pass of each gradient accumulation step for different FSDP sharding strategies:
+
+
+| Sharding strategy | Forward pass | Backward pass | Remarks |
+| ---------------- | ------------ | ------------- | -------- |
+| optim            | all-gather   | all-reduce | The all-gather operations are only needed on the first gradient accumulation step. Similarly, all-reduce is only needed on the last gradient accumulation step. |
+| optim_grads      | all-gather   | reduce-scatter | The all-gather operations are only needed on the first gradient accumulation step. The reduce-scatter operations must be performed during the backward pass for all gradient accumulation steps. |
+| optim_grads_params | all-gather   | reduce-scatter | The all-gather and reduce-scatter operations are performed during all gradient accumulation steps. |
+
+
 
 The sharding of model parameters requires all-gather operations to be performed during the forward and backward passes to materialize the parameters of the layer for which the computation is being performed. If the gradients are also sharded, reduce-scatter operations are also required to assign each DP rank its shard of the gradients. When the backward pass is overlapped with these communication operations, the resulting kernel interference increases the time required to perform the computation for the backward pass. This results in a slight decrease in throughput.
 
