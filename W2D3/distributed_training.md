@@ -112,7 +112,7 @@ For a standard transformer architecture, the number of FLOPs is calculated as fo
 
 | Operation | FLOPs per training example excluding a constant pre-factor |
 | --------- | ----- |
-| query projection | `sequence_length` * `hidden_size` * `num_query_heads` * `head_dim` |
+| query projection | `sequence_length` * `hidden_size` * `num_attention_heads` * `head_dim` |
 | key projection | `sequence_length` * `hidden_size` * `num_key_value_heads` * `head_dim` |
 | value projection | `sequence_length` * `hidden_size` * `num_key_value_heads` * `head_dim` |
 | query-key product | `sequence_length` * `head_dim` * `sequence_length` * `num_attention_heads` / 2 |
@@ -128,7 +128,7 @@ For a standard transformer architecture, the number of FLOPs is calculated as fo
 
 `mlp_flops` = `mlp_projection_flops` * `num_mlp_layers`
 
-`total_flops` = `matmul_factor` * (`attention_flops` + `mlp_flops` + `lm_head_flops`)
+`total_flops` = `matmul_factor` * `batch_size` * (`attention_flops` + `mlp_flops` + `lm_head_flops`)
 
 
 Remarks on FLOPs calculation:
@@ -465,9 +465,7 @@ The following table summarizes the communication operations that must be perform
 | optim_grads      | all-gather   | reduce-scatter | The all-gather operations are only needed on the first gradient accumulation step. The reduce-scatter operations must be performed during the backward pass for all gradient accumulation steps. |
 | optim_grads_params | all-gather   | reduce-scatter | The all-gather and reduce-scatter operations are performed during all gradient accumulation steps. |
 
-
-
-The sharding of model parameters requires all-gather operations to be performed during the forward and backward passes to materialize the parameters of the layer for which the computation is being performed. If the gradients are also sharded, reduce-scatter operations are also required to assign each DP rank its shard of the gradients. When the backward pass is overlapped with these communication operations, the resulting kernel interference increases the time required to perform the computation for the backward pass. This results in a slight decrease in throughput.
+As the number of sharded quantities increases, the number of communication operations required during the forward and backward passes increases. The small model size and the overlap of communication with computation prevents the throughput from decreasing significantly as a result of additional communication overhead. However, effects such as kernel interference may still result in a slight decrease in throughput, especially for the case in which parameters, gradients and optimizer states are all sharded.
 
 
 
