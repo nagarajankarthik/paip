@@ -52,4 +52,16 @@ It is also possible to offload the activations to CPU memory and reload them whe
 
 ## Overlapping Communication with Computation
 
-Overlapping communication with computation is a general strategy that can be used to improve throughput by executing these operations in parallel. Megatron typically achieves this by performing communiation and computation in separate CUDA streams. 
+Overlapping communication with computation is a general strategy that can be used to improve throughput by executing these operations in parallel. Megatron typically achieves this by performing communiation and computation in separate CUDA streams. A CUDA stream is a sequence of operations that are executed in order on the GPU and independently of other streams. Operations in different streams can be executed in parallel, enabling efficient utilization of the GPU's compute resources. Streams can be synchronized using events, which can be useful when one rank needs data from other ranks in order to perform an operation. 
+
+
+The specific manner in which computation and communication are overlapped depends on the types of parallelism being used. For data parallelism, the two key techniques for achieving this include overlapping the all-gather of model parameters with the forward pass and overlapping the all-reduce or reduce-scatter of gradients with the backward pass. These optimizations can be enabled by setting the `overlap_grad_reduce` and `overlap_param_gather` options to `True` in the Megatron training configuration.
+
+
+When tensor parallelism (TP) is combined with sequence parallelism (SP), all-gather and reduce-scatter operations are needed when transiting between model regions using different parallelism strategies. These coomunication operations can be partially overlapped with computation using a minimal set of configuration parameters in Megatron-Bridge. Note that sequence parallelism must be enabled to enable overlapping.
+
+
+For context parallelism (CP), the ring attention mechanism is where most of the communication occurs. As explained [here](https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=zig-zag_ring_attention_%E2%80%93_a_balanced_compute_implementation), each rank can pre-fetch the next key-value pair while calculating the attention scores corresponding to its current key-value pair. This ensures that no rank is waiting for data from its neighbour in order to calculate the attention scores. No additional configuration is needed to enable this overlapping strategy. 
+
+For Mixture-of-Experts (MoE) models, Megatron enables overlapping MoE expert parallel all-to-all communication with computation. See the [Megatron-Bridge documentation](https://docs.nvidia.com/nemo/megatron-bridge/0.2.0/training/communication-overlap.html#moe-expert-parallel-communication-overlap) for more details.
+
