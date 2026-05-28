@@ -213,6 +213,8 @@ A4)
   | Full      | 5.53          | 148.29                           | 73.65               |
   | Selective | 4.30          | 190.56                           | 73.65               |
 
+
+
     Enabling full activation recomputation decreases the throughput considerably. In this case, none of the activations are stored during the forward pass, requiring them to be recomputed during the backward pass. As the activations account for a small proportion of the GPU memory usage for short sequence lengths, there is no benefit in enabling activation recomputation in such cases.
     The throughput is better for selective as compared to full recomputation as it only recomputes those activations which with a larger memory footprint and which are cheaper to recompute. See the [Megatron documentation](https://docs.nvidia.com/megatron-core/developer-guide/latest/apidocs/core/core.transformer.transformer_config.html) for more details.
     
