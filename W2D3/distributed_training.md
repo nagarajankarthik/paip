@@ -648,4 +648,51 @@ On the other hand, the attention scores for each subset of heads in a multi-head
 
 The memory utilization per GPU for the TP with SP case is about half that obtained for the CP = 2 case. While both TP and CP shard the activations, TP additionally shards the model parameters, gradients and optimizer states. This leads to the lower memory utilization per GPU for the TP = 2 with SP case.
 
+# Expert Parallelism
+
+## Theory
+
+Read about the Mixture-of-Experts (MoE) architecture in this [review paper](https://arxiv.org/pdf/2503.07137) and [blog post](https://huggingface.co/blog/moe).
+
+Read the section entitled "Expert Parallelism" in the [Nanotron UltraScale Playbook](https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=expert_parallelism).
+
+Checklist of key concepts:
+
+1. Architectural difference between MoE and dense models.
+2. Communication operations used in expert parallelism.
+
+
+## Check your understanding
+
+1. Which of the following statements regarding MoE models are true? Select all that apply.
+
+<ol type="a">
+<li> The main architectural difference between a MoE and a dense Transformer model is that the former optionally replaces some or all feedforward network (FFN) sublayers with MoE layers. </li>
+<li> A key challenge in training MoE models is router collapse. It arises when only a subset of experts are predominantly activated during training, leaving the remaining experts undertrained.</li>
+<li> Different experts in a MoE layer are specialized for different tasks such as math, programming and Languages.</li> 
+</ol>
+
+Answer: **a and b only.**
+
+Explanation:
+- Statement a is **true**. Each MoE layer consists of a gating network (router) and $N$ expert networks (typically FFNs), where the router selects a subset of top-$k$ experts per token. In the common sparse variant, only those $k$ experts are activated per token.
+- Statement b is **true**. Since routers are trained jointly with experts, a naive training appraoch can introduce a positive feeback loop, in which an expert gets trained on more tokens if the router exhibits a slight preference towards it over others. This may in turn reinforce the router's preference towards this expert, eventually leading to router collapse. Solutions to address this problem include the use of an auxiliary load-balancing loss to penalize imbalanced expert utilization, expert capacity limits that restrict the maximum number of tokens an expert can process per batch, and random routing warmup, which initializes the routing randomly before learned routing kicks in.
+- Statement c is **false**. The experts in a MoE layer are not specialized for different tasks. In fact, each expert learns a mix of general and domain specific information, with considerable overlap in the content they learn. During training, the router assigns tokens to experts in the manner which is mathematically optimal for next-token prediction. See [here](https://www.linkedin.com/pulse/clearing-up-misconceptions-sparse-mixture-experts-moe-david-ziegler-co9me) and [here](https://www.linkedin.com/posts/eugeniosegala_moe-myth-busters-clearing-up-common-misconceptions-activity-7359983936598331394-xXVW) for more details.
+
+2. Which of the following statement regarding expert parallelism are true? Select all that apply.
+
+<ol type="a">
+<li> The purpose of expert parallelism is to ensure even training of the experts in a MoE layer.</li>
+<li> When expert parallelism is used together with data parallelism, all-to-all operations are required to ensure that tokens on one rank assigned to an expert on another rank are sent to that expert.</li>
+<li> The weights of the router are sharded across expert parallel ranks.</li>
+</ol>
+
+Answer: **b only.**
+
+Explanation:
+
+- Statement a is **false**. Expert parallelism distributes the weights of different experts to different GPUs to enable parallel comptation across device. It does not determine how many tokens each expert receives, which is determined by the router.
+- Statement b is **true**. In this scenario, there are actually two all-to-all communication operations per forward and backward pass. During the forward pass, the first all-to-all operation dispatches tokens on each rank to whichever rank holds the target expert weights. The second all-to-all operation combines the expert outputs from different ranks on the rank originally holding the respective tokens, so that they can be recombined to the right sequence order.
+- Statement c is **false**. The router weights are replicated rather than sharded across expert parallel ranks. If this was not the case, a communication step would be needed to make the routing decisions known to all ranks before the all-to-all dispatch. The router layer itself is typically a single linear projection layer of dimensions (`number_experts` x `hidden_size`), making it much smaller than the expert weights. Hence, it is always duplicated across expert parallel ranks to avoid unnecessary communication overhead.
+
 
