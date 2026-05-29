@@ -332,11 +332,11 @@ Note that Megatron-LM internally calculates the number of DP ranks as `dp_size =
 
 
 
-| DP Ranks | Step time (s) | Throughput per GPU (TFLOP/s/GPU) |
-| -------- | ------------- | -------------------------------- |
-| 1        | 3.37          | 218.03                           |
-| 2        | 2.05          | 199.92                           |
-| 4        | 1.10          | 186.76                           |
+| DP Ranks | Step time (s) | Throughput per GPU (TFLOP/s/GPU) | Memory per GPU (GB) |
+| -------- | ------------- | -------------------------------- | ----------------- |
+| 1        | 3.31          | 247.69                           | 73.65             |
+| 2        | 1.76          | 233.83                           | 73.65             |
+| 4        | 0.99          | 208.23                           | 73.65             |
 
 
 The throughput per GPU decreases slightly with increasing number of DP ranks. As explained [here](https://apxml.com/courses/optimization-techniques-ml/chapter-5-distributed-ml-optimization/all-reduce-algorithms), an all-reduce operation can be thought of as performing a reduce-scatter, followed by an all-gather operation. Each of these operations require $(N - 1)$ communication steps, where $N$ is the number of DP ranks. In each communication step, a single GPU sends $M/N$ bytes of data to another rank, where $M$ is the total size of the data to be all-reduced. Hence, the total volume of data sent by a single GPU during an all-reduce operation is given by $2(N - 1)M/N$. Since the factor $(N - 1)/N$ asymptotically approaches one as $N$ increases, the total number of bytes sent increases over the range of $N$ tested. This increase in communication overhead may reduce the throughput for small values of $N$. 
@@ -346,11 +346,11 @@ Q2) Repeat the 3 runs as question 1 using the same numbers of DP ranks but with 
 
 A2)
 
-| DP Ranks | Step time (s) | Throughput per GPU (TFLOP/s/GPU) |
-| -------- | ------------- | -------------------------------- |
-| 1        | 3.90          | 210.23                           |
-| 2        | 2.05          | 199.86                           |
-| 4        | 1.10          | 186.07                           |
+| DP Ranks | Step time (s) | Throughput per GPU (TFLOP/s/GPU) | Memory per GPU (GB) |
+| -------- | ------------- | -------------------------------- | ----------------- |
+| 1        | 3.26          | 251.59                           | 73.65             |
+| 2        | 1.73          | 236.84                           | 73.65             |
+| 4        | 1.01          | 203.80                           | 73.65             |
 
 
 There is no significant change in the throughput when `overlap_grad_reduce` is set to `False`. The throughput per device still decreases to the same extent with increasing number of DP ranks.
@@ -405,9 +405,9 @@ Results for DDP with non-distributed optimizer using `nemo:25.11` container. The
 
 | DP Ranks | Step time (s) | Throughput per GPU (TFLOP/s/GPU) | Memory per GPU (GB) |
 | -------- | ------------- | -------------------------------- | ------------------- |
-| 1        | 4.10          | 200.11                           | 73.65               |
-| 2        | 2.12          | 193.52                           | 73.65               |
-| 4        | 1.13          | 181.03                           | 73.65               |
+| 1        | 3.31          | 247.69                           | 73.65               |
+| 2        | 1.76          | 233.83                           | 73.65               |
+| 4        | 0.99          | 208.23                           | 73.65               |
 
 
 Results for FSDP:
@@ -415,9 +415,9 @@ Results for FSDP:
 
 | DP Ranks | Step time (s) | Throughput per GPU (TFLOP/s/GPU) | Memory per GPU (GB) |
 | -------- | ------------- | -------------------------------- | ------------------- |
-| 1        | 5.43          | 151.27                           | 72.60               |
-| 2        | 2.77          | 147.96                           | 48.46               |
-| 4        | 1.48          | 138.62                           | 36.39               |
+| 1        | 4.40          | 186.62                           | 72.60               |
+| 2        | 2.27          | 180.89                           | 48.46               |
+| 4        | 1.30          | 158.02                           | 36.39               |
 
 
 The throughput is consistently smaller for FSDP as compared to DPP, even for the single GPU case. The PyTorch CPU profiling trace shows that the FSDP run invokes several hooks before and/or after the forward and backward passes through each FSDP unit. The need to process these hooks on the CPU side before and/or after every forward and backward pass through each FSDP unit increases the time interval between the launch of kernels that perform computation on the GPU, which reduces the throughput as compared to DDP. Two of the important functions performed by these hooks include: 
@@ -438,9 +438,9 @@ Results for FSDP with optimizer state and gradient sharding:
 
 | DP Ranks | Step time (s) | Throughput per GPU (TFLOP/s/GPU) | Memory per GPU (GB) |
 | -------- | ------------- | -------------------------------- | ------------------- |
-| 1        | 5.43          | 151.12                           | 72.60               |
-| 2        | 2.78          | 147.78                           | 40.33               |
-| 4        | 1.46          | 140.59                           | 24.25               |
+| 1        | 4.48          | 183.12                           | 72.60               |
+| 2        | 2.26          | 181.31                           | 40.34               |
+| 4        | 1.24          | 165.92                           | 24.25               |
 
 
 Results for FSDP with optimizer state, gradients and model parameter sharding:
@@ -448,9 +448,9 @@ Results for FSDP with optimizer state, gradients and model parameter sharding:
 
 | DP Ranks | Step time (s) | Throughput per GPU (TFLOP/s/GPU) | Memory per GPU (GB) |
 | -------- | ------------- | -------------------------------- | ------------------- |
-| 1        | 5.74          | 142.86                           | 72.67               |
-| 2        | 3.05          | 134.39                           | 38.22               |
-| 4        | 1.55          | 132.60                           | 20.04               |
+| 1        | 4.57          | 179.71                           | 72.67               |
+| 2        | 2.42          | 169.41                           | 38.22               |
+| 4        | 1.30          | 157.59                           | 20.04               |
 
 
 The memory footprint per GPU progressively decreases as the number of data parallel ranks increases and as more quantities are sharded. 
