@@ -88,5 +88,5 @@ profiling:
   profile_step_start: 9
   profile_step_end: 10
   use_pytorch_profiler: false
-  profile_ranks: [0, 1]
+  profile_ranks: [0]
   record_shapes: true
