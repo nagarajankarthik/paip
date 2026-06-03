@@ -48,8 +48,6 @@ This is comparable to the memory required for the model weights, which is around
 
 ## 4. How does KV cache work?
 
-Reference: https://magazine.sebastianraschka.com/p/coding-the-kv-cache-in-llms
-
 ### The core idea
 
 In the attention mechanism, keys (K) and values (V) for any token depend only on that token's embedding — not on any future tokens. This means that once K and V are computed for a token, they remain valid for all future generation steps. Only the query (Q) changes at each step, because the query represents "what the current token is looking for."
@@ -81,3 +79,50 @@ See this [page](https://magazine.sebastianraschka.com/p/coding-the-kv-cache-in-l
 ## 5. Exercise
 
 Modify the `gpt_ch04.py` script in this [repository](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch04/03_kv-cache/gpt_ch04.py) to include KV cache. Compare your results for inference throughput and memory utilization with the original script as well as the `gpt_with_kv_cache.py` script in the same repository. 
+
+## 6. KV cache management techniques
+
+### 6.1. Paged Attention 
+
+A key challenge associated with serving a Large Language Model for online inference is the concurrent processing of multiple requests with variable input and output lengths that are unknown in advance. In such scenarios, efficient management of KV cache memory is essential for optimizing throughput, as measured by the number of tokens processed per second, and GPU utilization.
+
+As explained [here](https://arxiv.org/pdf/2309.06180), a static allocation strategy in which the engine reserves a pre-specified amount of memory for the KV cache of each request results in significant memory wastage due to internal and external fragmentation. For this reason, modern inference frameworks such as [vLLM](https://github.com/vllm-project/vllm) use algorithms such as Paged Attention that enables storing the key and value vectors of the tokens within a sequence in non-contiguous memory. This design choice provides the following benefits:
+
+- **Significant reduction of fragmentation.** KV-cache memory is allocated incrementally in fixed-size blocks as decoding progresses, eliminating the need to reserve space for the entire future sequence length in advance.
+- **Maximizing reuse of previously allocated memory.** KV-cache blocks corresponding to identical prompt prefixes can be shared across multiple requests, avoiding duplication of KV-cache data and reducing overall memory consumption.
+
+See this [page](https://www.aleksagordic.com/blog/vllm) for more details regarding KV cache memory management in vLLM.
+
+### 6.2. Linear Attention
+
+When performing inference using the standard attention mechanism, the time complexity of the attention calculation is $O(n^2d)$, where $n$ is the number of tokens in the input sequence and $d$ is the head dimension. The space complexity associated with the KV cache is $O(nd)$. The use of linear attention algorithms optimizes the time and space complexities to $O(nd^2)$ and $O(d^2)$ respectively. The key challenge is to do so without compromising the accuracy of the model's responses.
+
+The most basic form of the linear attention algorithm evaluates the attention output vector for position $t$ as $o_t = \sum_{j=1}^t (q_t^Tk_j)v_j$, where $q$, $k$ and $v$ represent the query, key and value vectors and the subscript denotes the position along the sequence. The above update rule can be equivalently expressed using a state matrix $S_t$ as
+
+$$
+o_t = \sum_{j=1}^t v_j (k_j^T q_t) =  (\sum_{j=1}^t v_j k_j^T) q_t = S_t q_t
+$$
+
+The state matrix $S_t \in \mathbb{R}^{d \times d}$ can be viewed as an associative memory that maps keys to their corresponding values. As explained [here](https://sustcsonglin.github.io/blog/2024/deltanet-1/), the vanilla linear attention algorithm outlined above exhibits unsatisfactory performance primarily because it does not have a machanism for erasing irrelevant information obtained from earlier key-value pairs. 
+
+As [Yang et al.](https://arxiv.org/abs/2412.06464v3) note, Mamba2 attempted to address this limitation by applying a position-dependent weight $\alpha_t \in (0, 1)$ to previous key-value pairs using the update rule:
+
+$$
+S_t = \alpha_t S_{t-1} + v_t k_t^T
+$$
+
+The key limitation of this approach is that it uniformly down-weights the contributions of all previous key-value pairs to the current state matrix $S_t$, without accounting for their relative importance. The [DeltaNet](https://sustcsonglin.github.io/blog/2024/deltanet-1/) algorithm was proposed as an alternative to remedy this deficiency. Its update rule is given by:
+
+$$
+S_t = S_{t - 1} - (S_{t - 1} k_t)k_t^T + (\beta_t v_t + (1 - \beta_t) S_{t - 1} k_t)k_t^T =  S_{t - 1} (1 - \beta_t k_t k_t^T) + \beta_t v_t k_t^T
+$$
+
+The first equality can be interpreted as dynamically erasing the old value $v_t^{old} = S_{t - 1}k_t $ associated with the current key and replacing it with a new value $v_t^{new} = \beta_t v_t + (1 - \beta_t)S_{t - 1}k_t$. As explained [here](https://sustcsonglin.github.io/blog/2024/deltanet-1/), the DeltaNet algorithm can also be interpreted as updating the state $S_t$ based on the prediction error associated with $S_{t - 1}$.
+
+The Gated DeltaNet algorithm attempts to unify the advantages of Mamba2 and DeltaNet, resulting in the following update rule:
+
+$$
+S_t = \alpha_t S_{t - 1} (1 - \beta_t k_t k_t^T) + \beta_t v_t k_t^T
+$$
+
+As of June 2026, it is used in modern LLMs such as Qwen 3.6.
